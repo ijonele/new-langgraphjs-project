@@ -4,5 +4,6 @@
     "agent": "./src/agent/graph.ts:graph"
   },
   "env": ".env",
-  "dependencies": ["."]
+  "dependencies": ["."],
+  "image_distro": "wolfi"
 }
