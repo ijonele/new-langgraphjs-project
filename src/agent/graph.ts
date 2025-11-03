@@ -1,10 +1,8 @@
-/**
- * Starter LangGraph.js Template
- * Make this code your own!
- */
 import { StateGraph } from "@langchain/langgraph";
 import { RunnableConfig } from "@langchain/core/runnables";
 import { StateAnnotation } from "./state.js";
+import { ChatOpenAI } from "@langchain/openai";
+import { HumanMessage } from "@langchain/core/messages";
 
 /**
  * Define a node, these do the work of the graph and should have most of the logic.
@@ -18,55 +16,31 @@ const callModel = async (
   state: typeof StateAnnotation.State,
   _config: RunnableConfig,
 ): Promise<typeof StateAnnotation.Update> => {
-  /**
-   * Do some work... (e.g. call an LLM)
-   * For example, with LangChain you could do something like:
-   *
-   * ```bash
-   * $ npm i @langchain/anthropic
-   * ```
-   *
-   * ```ts
-   * import { ChatAnthropic } from "@langchain/anthropic";
-   * const model = new ChatAnthropic({
-   *   model: "claude-3-5-sonnet-20240620",
-   *   apiKey: process.env.ANTHROPIC_API_KEY,
-   * });
-   * const res = await model.invoke(state.messages);
-   * ```
-   *
-   * Or, with an SDK directly:
-   *
-   * ```bash
-   * $ npm i openai
-   * ```
-   *
-   * ```ts
-   * import OpenAI from "openai";
-   * const openai = new OpenAI({
-   *   apiKey: process.env.OPENAI_API_KEY,
-   * });
-   *
-   * const chatCompletion = await openai.chat.completions.create({
-   *   messages: [{
-   *     role: state.messages[0]._getType(),
-   *     content: state.messages[0].content,
-   *   }],
-   *   model: "gpt-4o-mini",
-   * });
-   * ```
-   */
-  console.log("Current state:", state);
+  const model = new ChatOpenAI({
+    modelName: "gpt-4o-mini",
+    temperature: 0.7,
+    apiKey: process.env.OPENAI_API_KEY,
+  });
+
+  const response = await model.invoke([
+    {
+      role: "system",
+      content: "You are a helpful assistant that only answers questions about crypto."
+    },
+    new HumanMessage(state.messages[0].content),
+  ]);
+
+  console.log("Model response:", response);
+
   return {
     messages: [
       {
         role: "assistant",
-        content: `Hi there! How are you?`,
+        content: response.content,
       },
     ],
   };
 };
-
 /**
  * Routing function: Determines whether to continue research or end the builder.
  * This function decides if the gathered information is satisfactory or if more research is needed.
@@ -80,7 +54,6 @@ export const route = (
   if (state.messages.length > 0) {
     return "__end__";
   }
-  // Loop back
   return "callModel";
 };
 
@@ -100,5 +73,4 @@ const builder = new StateGraph(StateAnnotation)
   .addConditionalEdges("callModel", route);
 
 export const graph = builder.compile();
-
 graph.name = "New Agent";
